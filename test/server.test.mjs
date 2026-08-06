@@ -53,7 +53,7 @@ test("session update is constrained to Chinese-English text translation", () => 
         sourceLanguage: "fr",
         targetLanguage: "en",
       }),
-    /只支持 zh 或 en/,
+    /must be zh or en/,
   );
 });
 

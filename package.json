@@ -1,0 +1,21 @@
+{
+  "name": "qwen-live-translate-demo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Chinese-English live subtitle translation demo powered by Qwen LiveTranslate.",
+  "scripts": {
+    "start": "node server.mjs",
+    "dev": "node --watch server.mjs",
+    "local": "node scripts/start-local.mjs",
+    "local:setup": "python3 -m venv .venv && .venv/bin/pip install -r local/requirements.txt",
+    "local:download": ".venv/bin/python local/local_server.py --preload-only",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
+  }
+}

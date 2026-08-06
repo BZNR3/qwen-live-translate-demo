@@ -1,169 +1,172 @@
-# 免费中英会议字幕 Demo（本地 MLX + Qwen3）
+# Local Chinese-English Meeting Translator (MLX + Qwen3)
 
-这是一个已经可以运行的小型中英语音翻译 Demo。它能采集麦克风，或用户主动共享的 Chrome 会议/视频标签页音频，在网页中显示原文和译文。
+A working Chinese-English speech translation demo for Apple Silicon Macs. It captures microphone audio or audio from a Chrome meeting/video tab, then displays the transcript and translation as bilingual subtitles in the browser.
 
-默认模式完全在 Apple Silicon Mac 本机运行，不需要 OpenAI、阿里云或其他付费 API：
+The default mode runs entirely on your Mac and does not require OpenAI, Alibaba Cloud, or another paid API:
 
 ```text
-麦克风 / Chrome 标签页音频
-           ↓ 16 kHz PCM
-静音切句（停顿约 0.8 秒）
-           ↓
-MLX Whisper Small：中英文语音识别
-           ↓
-Qwen3 1.7B 4-bit：中 ↔ 英翻译
-           ↓
-网页双语字幕
+Microphone / Chrome tab audio
+              ↓ 16 kHz PCM
+Silence-based utterance segmentation (~0.8-second pause)
+              ↓
+MLX Whisper Small: Chinese/English speech recognition
+              ↓
+Qwen3 1.7B 4-bit: Chinese ↔ English translation
+              ↓
+Bilingual subtitles in the browser
 ```
 
-项目还保留了可选的 `Qwen3.5 LiveTranslate` 百炼云端模式，方便比较真正流式同传的延迟，但它只是限期免费额度，不属于永久免费的默认方案。
+An optional Alibaba Cloud Model Studio mode using `Qwen3.5 LiveTranslate` is included for comparing true streaming interpretation latency. It requires a cloud API key and is not the permanently free default.
 
-## 为什么这样选模型
+## Why these models?
 
-| 环节 | 默认模型 | 大小 | 选择理由 |
+| Stage | Default model | Approx. size | Why it was selected |
 | --- | --- | ---: | --- |
-| 语音识别 | `mlx-community/whisper-small-mlx` | 约 459 MB | 中英文识别成熟，MLX 能直接利用 Apple Silicon 统一内存与 GPU |
-| 翻译 | `Qwen/Qwen3-1.7B-MLX-4bit` | 约 914 MB | Qwen 官方 4-bit MLX 权重，Apache 2.0，体积小，支持 100+ 语言；Demo 只开放中英 |
-| 云端可选 | `qwen3.5-livetranslate-flash-realtime` | 无本地权重 | 专用实时翻译模型，能返回流式原文和译文，延迟更低 |
+| Speech recognition | `mlx-community/whisper-small-mlx` | 459 MB | Reliable Chinese and English recognition; MLX uses Apple Silicon unified memory and GPU acceleration |
+| Translation | `Qwen/Qwen3-1.7B-MLX-4bit` | 914 MB | Official Qwen 4-bit MLX weights, Apache 2.0, compact, and multilingual |
+| Optional cloud mode | `qwen3.5-livetranslate-flash-realtime` | No local weights | Dedicated real-time translation model with streaming transcripts and translations |
 
-Qwen 官方也开源了 `Qwen3-ASR-0.6B/1.7B`，支持 52 种语言和方言。不过其高性能流式服务路线主要使用 vLLM/CUDA；当前这台 Apple Silicon Mac 上，MLX Whisper 更容易稳定运行，所以本地 Demo 采用“Whisper 识别 + Qwen 翻译”的两段式架构。若以后部署到 NVIDIA Linux 服务器，可以把识别层换成 Qwen3-ASR。
+Qwen also provides the open-source `Qwen3-ASR-0.6B/1.7B` models for 52 languages and dialects. Their high-performance streaming path mainly targets vLLM/CUDA. MLX Whisper is easier to run reliably on an Apple Silicon Mac, so this demo uses a two-stage Whisper + Qwen architecture. On an NVIDIA Linux server, the recognition layer can later be replaced with Qwen3-ASR.
 
-本地模型是“无需 API 账单”，不是零成本：需要约 1.4 GB 模型下载、一些磁盘空间和本机算力。模型下载后可断网推理。
+Local inference means no API bill, but it is not resource-free. The default models require about 1.4 GB of downloads, disk space, memory, and local compute. After downloading the weights, local mode can run offline.
 
-## 已验证结果
+## Verified results
 
-在 16 GB Apple Silicon Mac 上，用系统合成的干净语音做了真实推理（不是 mock）：
+Real inference was tested on a 16 GB Apple Silicon Mac using clean system-generated speech rather than mocks:
 
-- 英文音频 3.50 秒
-  - 识别：`Good morning, today we will review the local translation demo.`
-  - 翻译：`早上好，今天我们将回顾本地翻译演示。`
-  - 首次加载模型后完成：约 4.6 秒
-- 中文音频 4.34 秒
-  - 识别：`大家好，今天我們測試本地的中英文會議翻譯。`
-  - 翻译：`Hello everyone, today we are testing the local Chinese-to-English translation meeting.`
-  - 模型热身后完成：约 0.6 秒
+- 3.50-second English sample
+  - Transcript: `Good morning, today we will review the local translation demo.`
+  - Translation: `Good morning. Today we will review the local translation demo.` translated into Chinese
+  - Completed in about 4.6 seconds after the first model load
+- 4.34-second Chinese sample
+  - Transcript: a short greeting about testing local Chinese-English meeting translation
+  - Translation: `Hello everyone, today we are testing the local Chinese-to-English translation meeting.`
+  - Completed in about 0.6 seconds after model warm-up
 
-这只是功能验证，不是正式基准。真实会议中的噪音、重叠说话、口音和设备温度都会改变准确率与延迟。
+These are functional checks, not a formal benchmark. Noise, overlapping speakers, accents, microphone quality, and device temperature will affect accuracy and latency.
 
-## 五分钟启动本地免费模式
+## Five-minute local setup
 
-### 1. 环境要求
+### 1. Requirements
 
-- Apple Silicon Mac（M1 或更新）
-- macOS 13.5 或更新
+- Apple Silicon Mac (M1 or newer)
+- macOS 13.5 or newer
 - Python 3.10–3.13
-- Node.js 20 或更新
-- Chrome（标签页音频捕获兼容性最好）
-- 首次安装需联网；运行模型时不需要联网
+- Node.js 20 or newer
+- Chrome (recommended for tab-audio capture)
+- Internet access for the first installation and model download
 
-先确认版本：
+Check your installed versions:
 
 ```bash
 python3 --version
 node --version
 ```
 
-### 2. 安装网页依赖
+### 2. Clone the repository and install web dependencies
+
+Because this repository is private, GitHub authentication is required when cloning it.
 
 ```bash
-cd /Users/ming/zbm/qwen-live-translate-demo
+git clone https://github.com/BZNR3/qwen-live-translate-demo.git
+cd qwen-live-translate-demo
 npm install
 ```
 
-### 3. 创建 Python 环境并安装本地推理依赖
+### 3. Create the Python environment
 
 ```bash
 npm run local:setup
 ```
 
-它会创建项目内的 `.venv`，并安装 `mlx-whisper` 与 `mlx-lm`。`.venv` 已被 Git 忽略。
+This creates `.venv` inside the project and installs `mlx-whisper` and `mlx-lm`. The virtual environment is ignored by Git.
 
-如果电脑上 `python3` 不是 3.10–3.13，请用正确的解释器手动执行：
+If `python3` is not Python 3.10–3.13, create the environment with a compatible interpreter:
 
 ```bash
 /path/to/python3.12 -m venv .venv
 .venv/bin/pip install -r local/requirements.txt
 ```
 
-### 4. 提前下载模型（推荐）
+### 4. Download the models in advance (recommended)
 
 ```bash
 npm run local:download
 ```
 
-这会下载约 1.4 GB 权重，并做一次预加载。也可以跳过；跳过时，第一次说话才会下载，页面会等待更久。
+This downloads and preloads about 1.4 GB of model weights. You may skip this step, but the first translation will then wait for the download.
 
-### 5. 一键启动
+### 5. Start both services
 
 ```bash
 npm run local
 ```
 
-这个命令会同时启动：
+The command starts:
 
-- 本地 MLX 模型服务：`http://127.0.0.1:8765`
-- Demo 网页与 WebSocket 服务：`http://127.0.0.1:8787`
+- Local MLX inference service: `http://127.0.0.1:8765`
+- Demo website and WebSocket proxy: `http://127.0.0.1:8787`
 
-用 Chrome 打开：
+Open the demo in Chrome:
 
 ```text
 http://127.0.0.1:8787
 ```
 
-看到“本地模式就绪”即可开始。停止时在终端按 `Ctrl+C`，两个服务会一起退出。
+You can begin when the page shows **Local mode ready**. Press `Ctrl+C` in the terminal to stop both services.
 
-## 页面如何使用
+## Using the app
 
-### 翻译麦克风
+### Translate microphone audio
 
-1. “运行方式”保留“完全本地 · 永久免费”。
-2. 选择 `English → 中文` 或 `中文 → English`。
-3. 声音来源选择“麦克风”。
-4. 可选填写术语表，每行一条，例如：
+1. Keep **Run mode** set to **Fully local · No API fees**.
+2. Choose **English → Chinese** or **Chinese → English**.
+3. Set **Audio source** to **Microphone**.
+4. Optionally enter glossary mappings, one per line:
 
    ```text
-   Model Studio=百炼
-   Qwen=通义千问
+Model Studio=Alibaba Cloud Model Studio
+Qwen=Qwen
    ```
 
-5. 点击“开始翻译”，允许 Chrome 使用麦克风。
-6. 说一个完整句子并停顿约一秒。左侧随后显示识别原文，右侧显示 Qwen 译文。
-7. 点击“停止并刷新最后一句”，等待状态恢复就绪。
+5. Select **Start translation** and allow Chrome to use the microphone.
+6. Speak a complete sentence and pause for about one second.
+7. Select **Stop and flush final sentence** to finish the current session.
 
-本地模式不是逐字流式：它在检测到约 0.8 秒静音后送出一句，单句最长 15 秒。短句、清楚停顿和耳机麦克风效果最好。
+Local mode is utterance-based rather than word-by-word streaming. It submits an utterance after roughly 0.8 seconds of silence, with a maximum utterance length of 15 seconds. Short sentences, clear pauses, and a headset microphone work best.
 
-### 翻译 Teams / Zoom / Meet 网页会议
+### Translate a Teams, Zoom, or Meet web meeting
 
-1. 用 Chrome 打开会议或播放视频的标签页。
-2. 在 Demo 中选择“标签页 / 系统音频”。
-3. 点击“开始翻译”。
-4. Chrome 弹出共享对话框后，选择正在发声的 **Chrome 标签页**。
-5. 勾选“分享标签页音频”。
+1. Open the meeting or video in a Chrome tab.
+2. In the demo, select **Tab / system audio**.
+3. Select **Start translation**.
+4. In Chrome's sharing dialog, choose the **Chrome tab** that is playing audio.
+5. Enable **Share tab audio**.
 
-浏览器会要求一条视频共享轨道来启动标签页捕获，但 Demo 不读取或上传视频帧，只处理音频。
+Chrome requires a video sharing track to initiate tab capture, but the demo neither reads nor uploads video frames. It only processes audio.
 
-浏览器不保证能捕获桌面版 Teams/Zoom 应用的系统音频。当前最可靠的测试方式是网页版会议或 Chrome 视频标签页；正式 macOS 桌面 App 应改用 ScreenCaptureKit，Windows 应改用 WASAPI Loopback。
+A browser cannot reliably capture system audio from the native Teams or Zoom desktop apps. The most dependable prototype workflow is a web meeting or Chrome video tab. A production macOS desktop app should use ScreenCaptureKit; Windows should use WASAPI Loopback.
 
-## 术语表的作用与限制
+## Glossary behavior and limitations
 
-- 术语表的源词会作为 Whisper 的识别提示，也会作为 Qwen 的强制翻译映射。
-- 每行格式是 `原词=译词`，最多 50 条。
-- 它能提高产品名、人名和缩写的稳定性，但小模型仍可能先把罕见词听错；正式产品应增加拼写纠错或更大的 ASR 模型。
+- Source terms are passed to Whisper as recognition hints and to Qwen as required translation mappings.
+- Use `source term=target term`, one mapping per line, with a maximum of 50 entries.
+- A glossary improves names, product terms, and abbreviations, but a small ASR model can still mishear rare terms. A production version should add spelling correction or use a larger ASR model.
 
-## 可选：百炼 Qwen 云端实时模式
+## Optional Qwen cloud streaming mode
 
-云端模式不是永久免费的。Model Studio 国际区新用户当前有 100 万 token、90 天有效的免费额度；用完后按量计费。选择它的原因是端到端流式延迟更低，而不是“免费”。
+Cloud mode is not permanently free. It is included because its end-to-end streaming latency is lower than the local utterance-based pipeline.
 
-### 配置
+### Configuration
 
-1. 在 Alibaba Cloud Model Studio 的 Singapore 区域创建 Workspace 和 API Key。
-2. 复制环境变量模板：
+1. Create a workspace and API key in the Singapore region of Alibaba Cloud Model Studio.
+2. Copy the environment template:
 
    ```bash
    cp .env.example .env
    ```
 
-3. 编辑 `.env`：
+3. Edit `.env`:
 
    ```dotenv
    DASHSCOPE_API_KEY=sk-your-real-key
@@ -171,103 +174,103 @@ http://127.0.0.1:8787
    QWEN_REGION=singapore
    ```
 
-4. 运行 `npm run local`（同时保留本地模式），或只运行 `npm start`。
-5. 页面上选择“百炼云端 · 免费额度”。
+4. Run `npm run local` to keep both providers available, or `npm start` for the web proxy only.
+5. Select **Model Studio cloud · Trial quota** in the app.
 
-API Key 只保存在 Node 服务端，不会下发浏览器。云端模式会把音频发给百炼；本地模式不会。
+The API key remains on the Node server and is never sent to the browser. Cloud mode sends the selected audio to Alibaba Cloud Model Studio; local mode does not.
 
-## 配置项
+## Configuration reference
 
-| 环境变量 | 默认值 | 用途 |
+| Environment variable | Default | Purpose |
 | --- | --- | --- |
-| `LOCAL_ASR_MODEL` | `mlx-community/whisper-small-mlx` | 替换本地 ASR 权重 |
-| `LOCAL_QWEN_MODEL` | `Qwen/Qwen3-1.7B-MLX-4bit` | 替换本地翻译权重 |
-| `LOCAL_TRANSLATOR_URL` | `http://127.0.0.1:8765` | Node 连接本地模型服务的地址 |
-| `DASHSCOPE_API_KEY` | 空 | 百炼云端模式的 Key |
-| `QWEN_WORKSPACE_ID` | 空 | 百炼 Workspace ID |
-| `QWEN_REGION` | `singapore` | `singapore` 或 `beijing` |
-| `HOST` / `PORT` | `127.0.0.1` / `8787` | Demo 网页监听地址 |
+| `LOCAL_ASR_MODEL` | `mlx-community/whisper-small-mlx` | Override the local ASR model |
+| `LOCAL_QWEN_MODEL` | `Qwen/Qwen3-1.7B-MLX-4bit` | Override the local translation model |
+| `LOCAL_TRANSLATOR_URL` | `http://127.0.0.1:8765` | URL used by Node to reach the local model service |
+| `DASHSCOPE_API_KEY` | Empty | API key for the optional cloud provider |
+| `QWEN_WORKSPACE_ID` | Empty | Alibaba Cloud Model Studio workspace ID |
+| `QWEN_REGION` | `singapore` | `singapore` or `beijing` |
+| `HOST` / `PORT` | `127.0.0.1` / `8787` | Demo web server bind address |
 
-如果 1.7B 翻译质量不够，16 GB Mac 可以尝试更大的 4-bit Qwen 权重：
+For higher translation quality, a 16 GB Mac can try a larger 4-bit Qwen model:
 
 ```bash
 LOCAL_QWEN_MODEL=Qwen/Qwen3-4B-MLX-4bit npm run local
 ```
 
-它会多占内存、磁盘并增加延迟，Demo 默认不自动下载。
+The larger model uses more memory and disk space and may increase latency, so it is not downloaded by default.
 
-## 自动测试
+## Tests
 
 ```bash
 npm test
 ```
 
-测试不调用任何云 API，当前包含 6 项：
+The six automated tests do not call a cloud API. They cover:
 
-- `.env` 解析
-- 中英文与 provider 参数限制
-- 本地音量/静音切句
-- 浏览器 → 本地模型服务 → 双语字幕的完整代理链（假模型）
-- Qwen 云端会话配置
-- PCM Base64 转发、Authorization Header 与最后一句刷新
+- `.env` parsing
+- Chinese/English and provider validation
+- Local volume and silence-based utterance segmentation
+- Browser → local model service → subtitle proxy flow with a fake model service
+- Qwen cloud session configuration
+- PCM forwarding, authorization, and final-utterance flushing
 
-真实本地模型的中英语音推理已经另外手动验证，结果见上文。
+Real local Chinese-English inference was also tested manually, as described above.
 
-## 常见问题
+## Troubleshooting
 
-### 页面显示“本地模型未启动”
+### The page says “Local model service is not running”
 
-不要只运行 `npm start`。本地模式需要：
+Local mode requires both services. Run:
 
 ```bash
 npm run local
 ```
 
-首次使用先执行 `npm run local:setup`。
+For a first-time installation, run `npm run local:setup` first.
 
-### 第一段字幕很慢
+### The first subtitle is slow
 
-第一次会从磁盘加载约 1.4 GB 权重；若还未下载，也会连接 Hugging Face。先运行 `npm run local:download`。模型热身后会明显加快。
+The first request loads about 1.4 GB of weights from disk. If they have not been downloaded, it also connects to Hugging Face. Run `npm run local:download` before starting the demo. Warm requests should be much faster.
 
-### 一直显示“正在聆听”
+### The page remains on “Listening”
 
-- 说完后停顿约一秒。
-- 检查浏览器是否取得正确的麦克风/标签页音频权限。
-- 会议音量太低时提高播放音量。
-- 浏览器共享对话框必须勾选“分享标签页音频”。
+- Pause for about one second after speaking.
+- Verify that Chrome has microphone or tab-audio permission.
+- Increase the meeting playback volume if it is too quiet.
+- Ensure **Share tab audio** is enabled in Chrome's sharing dialog.
 
-### 识别正确但翻译不自然
+### Recognition is correct but the translation sounds unnatural
 
-1.7B 是为本地轻量 Demo 选择的折中。先添加术语表；仍不够时换 4B 权重，或者使用云端 Qwen3.5 LiveTranslate 做 A/B 测试。
+The 1.7B model is a lightweight local compromise. Add glossary mappings first; if quality is still insufficient, use the 4B model or compare with Qwen3.5 LiveTranslate cloud mode.
 
-### 能否直接听桌面版 Teams / Zoom
+### Can it listen directly to the Teams or Zoom desktop app?
 
-这个网页原型不保证。可先使用会议网页版；正式 App 需要原生音频捕获层。现有模型服务和字幕 UI 可以保留，只替换采集层。
+This browser prototype cannot guarantee it. Use the web meeting first. A production desktop app requires a native audio-capture layer, while the existing model service and subtitle UI can remain.
 
-## 隐私与生产化边界
+## Privacy and production boundaries
 
-- 本地模式只监听 `127.0.0.1`，不上传、不落盘音频与字幕。
-- 浏览器只采集用户主动授权的来源。
-- 会议录音/转写前必须取得参会者同意，并遵守当地法律和公司政策。
-- 当前 Demo 没有账号、权限、字幕导出、说话人分离、会议历史或安装包。
-- 生产版还需要代码签名、自动更新、崩溃恢复、设备选择、回声处理、说话人分离和数据保留设置。
+- Local mode listens only on `127.0.0.1` and does not upload or persist audio or subtitles.
+- The browser captures only a source explicitly authorized by the user.
+- Obtain participant consent and follow applicable law and company policy before recording or transcribing a meeting.
+- This demo does not include accounts, permissions, subtitle export, speaker diarization, meeting history, or an installer.
+- A production version also needs code signing, automatic updates, crash recovery, device selection, echo handling, speaker diarization, and data-retention controls.
 
-## 主要文件
+## Project structure
 
 ```text
-server.mjs                 Node 网页服务、WebSocket、切句与双 provider 代理
-public/                    浏览器 UI、音频捕获与 16 kHz PCM 重采样
-local/local_server.py      MLX Whisper + Qwen3 本地推理服务
-scripts/start-local.mjs    一键启动/停止两个本地服务
-test/server.test.mjs       Node 集成测试
+server.mjs                 Web server, WebSocket proxy, segmentation, and provider routing
+public/                    Browser UI, audio capture, and 16 kHz PCM resampling
+local/local_server.py      Local MLX Whisper + Qwen3 inference service
+scripts/start-local.mjs    Starts and stops both local services
+test/server.test.mjs       Node integration tests
 ```
 
-## 官方资料
+## Official references
 
 - [Apple MLX](https://github.com/ml-explore/mlx)
-- [MLX Whisper 示例](https://github.com/ml-explore/mlx-examples/tree/main/whisper)
+- [MLX Whisper example](https://github.com/ml-explore/mlx-examples/tree/main/whisper)
 - [MLX LM](https://github.com/ml-explore/mlx-lm)
-- [Qwen 官方 Qwen3 1.7B MLX 4-bit 权重](https://huggingface.co/Qwen/Qwen3-1.7B-MLX-4bit)
-- [Qwen3-ASR 开源项目](https://github.com/QwenLM/Qwen3-ASR)
-- [Qwen3.5 LiveTranslate 云端文档](https://www.alibabacloud.com/help/en/model-studio/qwen3-5-livetranslate-flash-realtime)
-- [Alibaba Cloud Model Studio 价格](https://www.alibabacloud.com/help/en/model-studio/model-pricing)
+- [Official Qwen3 1.7B MLX 4-bit weights](https://huggingface.co/Qwen/Qwen3-1.7B-MLX-4bit)
+- [Qwen3-ASR project](https://github.com/QwenLM/Qwen3-ASR)
+- [Qwen3.5 LiveTranslate documentation](https://www.alibabacloud.com/help/en/model-studio/qwen3-5-livetranslate-flash-realtime)
+- [Alibaba Cloud Model Studio pricing](https://www.alibabacloud.com/help/en/model-studio/model-pricing)

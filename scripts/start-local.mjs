@@ -7,7 +7,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const python = path.join(root, ".venv", "bin", "python");
 
 if (!existsSync(python)) {
-  console.error("缺少 .venv。请先运行 npm run local:setup。");
+  console.error(".venv is missing. Run npm run local:setup first.");
   process.exit(1);
 }
 
@@ -30,7 +30,7 @@ function watch(child) {
   child.on("exit", (code, signal) => {
     if (!stopping) {
       console.error(
-        `子服务意外退出（${signal || `exit ${code ?? 1}`}），正在停止另一个服务。`,
+        `A child service exited unexpectedly (${signal || `exit ${code ?? 1}`}); stopping the other service.`,
       );
       stop(code || 1);
     }
@@ -50,7 +50,7 @@ async function waitForLocalService() {
     }
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  throw new Error("本地模型服务在 10 秒内没有就绪。");
+  throw new Error("The local model service did not become ready within 10 seconds.");
 }
 
 const pythonChild = spawn(

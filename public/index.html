@@ -1,13 +1,13 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
       name="description"
-      content="使用本地 MLX Whisper 与 Qwen3 的免费中英字幕翻译 Demo"
+      content="A local-first Chinese-English subtitle translation demo powered by MLX Whisper and Qwen3"
     />
-    <title>Qwen 中英实时翻译 Demo</title>
+    <title>Qwen Chinese-English Live Translator</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
@@ -15,99 +15,99 @@
       <header class="hero">
         <div>
           <p class="eyebrow">LOCAL-FIRST · CHINESE ↔ ENGLISH</p>
-          <h1>中英实时翻译</h1>
+          <h1>Chinese-English Live Translation</h1>
           <p class="subtitle">
-            麦克风或会议标签页音频，在本机识别并用 Qwen 显示双语字幕。
+            Capture a microphone or meeting tab, then recognize and translate it locally with Qwen.
           </p>
         </div>
-        <div id="modelPill" class="model-pill" title="本地运行，不需要 API Key">
+        <div id="modelPill" class="model-pill" title="Runs locally without an API key">
           <span class="pulse-dot"></span>
-          本地 MLX + Qwen3
+          Local MLX + Qwen3
         </div>
       </header>
 
       <section class="control-panel" aria-labelledby="control-title">
         <div class="section-heading">
           <div>
-            <p class="step-label">01 · 配置</p>
-            <h2 id="control-title">选择输入和翻译方向</h2>
+            <p class="step-label">01 · SETUP</p>
+            <h2 id="control-title">Choose an input and translation direction</h2>
           </div>
           <div id="status" class="status" data-tone="idle">
             <span class="status-dot"></span>
-            <span id="statusText">正在检查服务</span>
+            <span id="statusText">Checking services</span>
           </div>
         </div>
 
         <div class="controls-grid">
           <fieldset class="field-group provider-group">
-            <legend>运行方式</legend>
+            <legend>Run mode</legend>
             <div class="segmented" id="providerControl">
               <label>
                 <input type="radio" name="provider" value="local" checked />
-                <span>完全本地 · 永久免费</span>
+                <span>Fully local · No API fees</span>
               </label>
               <label>
                 <input type="radio" name="provider" value="qwen" />
-                <span>百炼云端 · 免费额度</span>
+                <span>Model Studio cloud · Trial quota</span>
               </label>
             </div>
             <small id="providerDescription" class="provider-description">
-              MLX Whisper 识别 + Qwen3 1.7B 翻译，音频不离开电脑；按停顿出字幕。
+              MLX Whisper recognition + Qwen3 1.7B translation. Audio stays on this Mac and subtitles appear after each pause.
             </small>
           </fieldset>
 
           <fieldset class="field-group">
-            <legend>翻译方向</legend>
+            <legend>Translation direction</legend>
             <div class="segmented" id="directionControl">
               <label>
                 <input type="radio" name="direction" value="en-zh" checked />
-                <span>English <b>→</b> 中文</span>
+                <span>English <b>→</b> Chinese</span>
               </label>
               <label>
                 <input type="radio" name="direction" value="zh-en" />
-                <span>中文 <b>→</b> English</span>
+                <span>Chinese <b>→</b> English</span>
               </label>
             </div>
           </fieldset>
 
           <fieldset class="field-group">
-            <legend>声音来源</legend>
+            <legend>Audio source</legend>
             <div class="segmented" id="sourceControl">
               <label>
                 <input type="radio" name="source" value="microphone" checked />
-                <span>麦克风</span>
+                <span>Microphone</span>
               </label>
               <label>
                 <input type="radio" name="source" value="display" />
-                <span>标签页 / 系统音频</span>
+                <span>Tab / system audio</span>
               </label>
             </div>
           </fieldset>
         </div>
 
         <label class="glossary-field" for="glossary">
-          <span>可选术语表</span>
-          <small>每行写“原词=译词”，最多 50 条</small>
+          <span>Optional glossary</span>
+          <small>Use “source term=target term”, one mapping per line (maximum 50)</small>
           <textarea
             id="glossary"
             rows="3"
-            placeholder="Model Studio=百炼&#10;Qwen=通义千问"
+            placeholder="Model Studio=Alibaba Cloud Model Studio&#10;Qwen=Qwen"
           ></textarea>
         </label>
 
         <div class="actions">
           <button id="startButton" class="primary-button" type="button" disabled>
             <span class="button-icon">▶</span>
-            开始翻译
+            Start translation
           </button>
           <button id="stopButton" class="secondary-button" type="button" disabled>
-            停止并刷新最后一句
+            Stop and flush final sentence
           </button>
-          <button id="clearButton" class="text-button" type="button">清空字幕</button>
+          <button id="clearButton" class="text-button" type="button">Clear subtitles</button>
         </div>
 
         <div id="displayHint" class="hint" hidden>
-          选择 Chrome 标签页时，请勾选“分享标签页音频”；选择屏幕或窗口时，系统不一定提供音频轨道。
+          When sharing a Chrome tab, enable “Share tab audio.” Screen or window sharing may not provide an audio track.
         </div>
         <div id="errorBox" class="error-box" role="alert" hidden></div>
       </section>
@@ -115,37 +115,37 @@
       <section class="transcript-section" aria-labelledby="transcript-title">
         <div class="section-heading">
           <div>
-            <p class="step-label">02 · 实时字幕</p>
-            <h2 id="transcript-title">原文与译文</h2>
+            <p class="step-label">02 · LIVE SUBTITLES</p>
+            <h2 id="transcript-title">Transcript and translation</h2>
           </div>
-          <div class="usage" id="usage">等待音频</div>
+          <div class="usage" id="usage">Waiting for audio</div>
         </div>
 
         <div class="transcript-grid">
           <article class="transcript-card source-card">
             <div class="card-topline">
-              <span id="sourceLabel">English · 原文</span>
+              <span id="sourceLabel">English · Transcript</span>
               <span class="live-marker">SOURCE</span>
             </div>
             <div id="sourceHistory" class="history" aria-live="polite"></div>
-            <p id="sourceLive" class="live-line muted">原文会显示在这里</p>
+            <p id="sourceLive" class="live-line muted">The transcript will appear here</p>
           </article>
 
           <article class="transcript-card target-card">
             <div class="card-topline">
-              <span id="targetLabel">中文 · 译文</span>
+              <span id="targetLabel">Chinese · Translation</span>
               <span class="live-marker accent">TRANSLATION</span>
             </div>
             <div id="targetHistory" class="history" aria-live="polite"></div>
-            <p id="targetLive" class="live-line muted">译文会显示在这里</p>
+            <p id="targetLive" class="live-line muted">The translation will appear here</p>
           </article>
         </div>
       </section>
 
       <section class="privacy-note">
-        <strong>隐私提示</strong>
+        <strong>Privacy notice</strong>
         <p>
-          <span id="privacyText">本地模式只在这台 Mac 上处理你主动选择的音频，不上传、不保存音频或字幕。</span> 正式会议使用前请取得参会者同意。
+          <span id="privacyText">Local mode processes only the audio you choose on this Mac. It does not upload or save audio or subtitles.</span> Obtain participant consent before using it in a real meeting.
         </p>
       </section>
     </main>

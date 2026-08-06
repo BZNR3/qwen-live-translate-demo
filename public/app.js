@@ -61,7 +61,7 @@ function setStatus(text, tone = "idle") {
 function setError(message = "") {
   elements.errorBox.hidden = !message;
   elements.errorBox.textContent = message;
-  if (message) setStatus("出现错误", "error");
+  if (message) setStatus("Error", "error");
 }
 
 function setControls(running) {
@@ -80,30 +80,30 @@ function updateProviderUI() {
   configured = available;
   setError();
   if (current === "local") {
-    elements.modelPill.lastChild.textContent = " 本地 MLX + Qwen3";
-    elements.modelPill.title = "本地运行，不需要 API Key";
+    elements.modelPill.lastChild.textContent = " Local MLX + Qwen3";
+    elements.modelPill.title = "Runs locally without an API key";
     elements.providerDescription.textContent =
-      "MLX Whisper 识别 + Qwen3 1.7B 翻译，音频不离开电脑；按停顿出字幕。";
+      "MLX Whisper recognition + Qwen3 1.7B translation. Audio stays on this Mac and subtitles appear after each pause.";
     elements.privacyText.textContent =
-      "本地模式只在这台 Mac 上处理你主动选择的音频，不上传、不保存音频或字幕。";
+      "Local mode processes only the audio you choose on this Mac. It does not upload or save audio or subtitles.";
     if (available) {
-      setStatus("本地模式就绪", "ready");
+      setStatus("Local mode ready", "ready");
     } else {
-      setError("请在终端运行 npm run local；首次使用先运行 npm run local:setup。");
-      setStatus("本地模型未启动", "error");
+      setError("Run npm run local in a terminal. For first-time setup, run npm run local:setup first.");
+      setStatus("Local model service is not running", "error");
     }
   } else {
     elements.modelPill.lastChild.textContent = " Qwen3.5 LiveTranslate";
-    elements.modelPill.title = "云端仅返回文本，节省免费额度";
+    elements.modelPill.title = "Cloud mode returns text only to reduce quota usage";
     elements.providerDescription.textContent =
-      "Qwen3.5 LiveTranslate 云端流式翻译，延迟更低；需要百炼免费额度和 API Key。";
+      "Qwen3.5 LiveTranslate provides lower-latency cloud streaming and requires a Model Studio API key and quota.";
     elements.privacyText.textContent =
-      "云端模式会把你主动选择的音频经本机代理发送给阿里云百炼；本 Demo 不保存音频或字幕。";
+      "Cloud mode sends the audio you choose to Alibaba Cloud Model Studio through the local proxy. This demo does not save audio or subtitles.";
     if (available) {
-      setStatus("云端模式就绪", "ready");
+      setStatus("Cloud mode ready", "ready");
     } else {
-      setError("请在服务端 .env 中配置 DASHSCOPE_API_KEY 和 QWEN_WORKSPACE_ID，然后重启服务。");
-      setStatus("缺少百炼配置", "error");
+      setError("Set DASHSCOPE_API_KEY and QWEN_WORKSPACE_ID in the server-side .env file, then restart the service.");
+      setStatus("Cloud configuration missing", "error");
     }
   }
   setControls(sessionState !== "idle");
@@ -112,11 +112,11 @@ function updateProviderUI() {
 function parseGlossary(text) {
   const glossary = {};
   const lines = text.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
-  if (lines.length > 50) throw new Error("术语表最多 50 行。");
+  if (lines.length > 50) throw new Error("The glossary can contain at most 50 lines.");
   for (const [index, line] of lines.entries()) {
     const separator = line.indexOf("=");
     if (separator < 1 || separator === line.length - 1) {
-      throw new Error(`术语表第 ${index + 1} 行格式不正确，应为“原词=译词”。`);
+      throw new Error(`Glossary line ${index + 1} is invalid. Use “source term=target term”.`);
     }
     const source = line.slice(0, separator).trim();
     const target = line.slice(separator + 1).trim();
@@ -128,9 +128,9 @@ function parseGlossary(text) {
 function updateLanguageLabels() {
   const current = direction();
   elements.sourceLabel.textContent =
-    current.sourceLanguage === "zh" ? "中文 · 原文" : "English · 原文";
+    current.sourceLanguage === "zh" ? "Chinese · Transcript" : "English · Transcript";
   elements.targetLabel.textContent =
-    current.targetLanguage === "zh" ? "中文 · 译文" : "English · 译文";
+    current.targetLanguage === "zh" ? "Chinese · Translation" : "English · Translation";
 }
 
 function updateSourceHint() {
@@ -138,9 +138,9 @@ function updateSourceHint() {
 }
 
 function resetLiveLines() {
-  elements.sourceLive.textContent = "原文会显示在这里";
+  elements.sourceLive.textContent = "The transcript will appear here";
   elements.sourceLive.classList.add("muted");
-  elements.targetLive.textContent = "译文会显示在这里";
+  elements.targetLive.textContent = "The translation will appear here";
   elements.targetLive.classList.add("muted");
 }
 
@@ -150,7 +150,7 @@ function clearTranscripts() {
   resetLiveLines();
   totalInputAudioTokens = 0;
   totalOutputTextTokens = 0;
-  elements.usage.textContent = "等待音频";
+  elements.usage.textContent = "Waiting for audio";
 }
 
 function setLive(element, text, fallback) {
@@ -170,7 +170,7 @@ function updateUsage(event) {
   if (event.local) {
     const seconds = Number(event.local.audioSeconds || 0).toFixed(1);
     const latency = (Number(event.local.latencyMs || 0) / 1000).toFixed(1);
-    elements.usage.textContent = `本句 ${seconds} 秒音频 · 本机处理 ${latency} 秒 · ¥0`;
+    elements.usage.textContent = `${seconds}s audio · ${latency}s local processing · $0 API cost`;
     return;
   }
   const usage = event.response?.usage;
@@ -178,8 +178,8 @@ function updateUsage(event) {
   totalInputAudioTokens += usage.input_tokens_details?.audio_tokens || 0;
   totalOutputTextTokens += usage.output_tokens_details?.text_tokens || 0;
   elements.usage.textContent =
-    `音频输入 ${totalInputAudioTokens.toLocaleString()} tokens · ` +
-    `文本输出 ${totalOutputTextTokens.toLocaleString()} tokens`;
+    `Audio input ${totalInputAudioTokens.toLocaleString()} tokens · ` +
+    `Text output ${totalOutputTextTokens.toLocaleString()} tokens`;
 }
 
 function handleServerEvent(event) {
@@ -187,58 +187,58 @@ function handleServerEvent(event) {
     case "proxy.connected":
       activeProvider = event.provider || "qwen";
       setStatus(
-        activeProvider === "local" ? "正在连接本地模型" : "正在配置 Qwen",
+        activeProvider === "local" ? "Connecting to local models" : "Configuring Qwen",
         "working",
       );
       break;
     case "proxy.ready":
-      setStatus("正在聆听", "working");
+      setStatus("Listening", "working");
       beginAudioPipeline().catch((error) => abortSession(error.message));
       break;
     case "proxy.processing":
-      setStatus("正在本机识别并翻译", "working");
-      setLive(elements.sourceLive, "", "正在识别…");
-      setLive(elements.targetLive, "", "正在翻译…");
+      setStatus("Recognizing and translating locally", "working");
+      setLive(elements.sourceLive, "", "Recognizing…");
+      setLive(elements.targetLive, "", "Translating…");
       break;
     case "proxy.flushing":
-      setStatus("正在刷新最后一句", "working");
+      setStatus("Flushing the final sentence", "working");
       break;
     case "proxy.finished":
       completeSession();
       break;
     case "proxy.error":
-      abortSession(event.message || "翻译服务返回错误。");
+      abortSession(event.message || "The translation service returned an error.");
       break;
     case "conversation.item.input_audio_transcription.text":
       setLive(
         elements.sourceLive,
         `${event.text || ""}${event.stash || ""}`,
-        "正在识别…",
+        "Recognizing…",
       );
       break;
     case "conversation.item.input_audio_transcription.completed":
       appendFinal(elements.sourceHistory, event.transcript);
-      setLive(elements.sourceLive, "", "等待下一句话…");
+      setLive(elements.sourceLive, "", "Waiting for the next sentence…");
       break;
     case "response.text.text":
       setLive(
         elements.targetLive,
         `${event.text || ""}${event.stash || ""}`,
-        "正在翻译…",
+        "Translating…",
       );
       break;
     case "response.text.done":
       appendFinal(elements.targetHistory, event.text);
-      setLive(elements.targetLive, "", "等待下一句话…");
+      setLive(elements.targetLive, "", "Waiting for the next sentence…");
       break;
     case "response.done":
       updateUsage(event);
       if (activeProvider === "local" && sessionState === "running") {
-        setStatus("正在聆听", "working");
+        setStatus("Listening", "working");
       }
       break;
     case "error":
-      abortSession(event.error?.message || "Qwen 返回错误。");
+      abortSession(event.error?.message || "Qwen returned an error.");
       break;
     default:
       break;
@@ -262,7 +262,7 @@ async function acquireMedia() {
     if (stream.getAudioTracks().length === 0) {
       stream.getTracks().forEach((track) => track.stop());
       throw new Error(
-        "没有取得音频轨道。请重新选择一个正在播放声音的 Chrome 标签页，并勾选“分享标签页音频”。",
+        "No audio track was captured. Choose a Chrome tab that is playing audio and enable “Share tab audio”.",
       );
     }
     stream.getVideoTracks()[0]?.addEventListener("ended", () => stopSession());
@@ -342,7 +342,7 @@ async function startSession() {
   const currentDirection = direction();
   sessionState = "starting";
   setControls(true);
-  setStatus("正在连接本机代理", "working");
+  setStatus("Connecting to the local proxy", "working");
   socket = new WebSocket(socketUrl());
   socket.binaryType = "arraybuffer";
   socket.addEventListener("open", () => {
@@ -359,17 +359,17 @@ async function startSession() {
     try {
       handleServerEvent(JSON.parse(message.data));
     } catch {
-      abortSession("收到无法解析的服务端消息。");
+      abortSession("Received an invalid message from the server.");
     }
   });
   socket.addEventListener("error", () => {
     if (!["idle", "finishing"].includes(sessionState)) {
-      abortSession("无法连接本机翻译服务。");
+      abortSession("Could not connect to the local translation service.");
     }
   });
   socket.addEventListener("close", () => {
     if (!["idle", "finishing"].includes(sessionState)) {
-      abortSession("翻译连接已关闭。");
+      abortSession("The translation connection closed unexpectedly.");
     }
   });
 }
@@ -392,7 +392,7 @@ async function completeSession() {
   socket = null;
   sessionState = "idle";
   setControls(false);
-  setStatus(configured ? "就绪" : "服务未配置", configured ? "ready" : "error");
+  setStatus(configured ? "Ready" : "Service not configured", configured ? "ready" : "error");
   updateProviderUI();
 }
 
@@ -414,7 +414,7 @@ async function checkHealth() {
   } catch {
     healthState = null;
     configured = false;
-    setError("无法读取本机服务状态，请确认服务已经启动。");
+    setError("Could not read the local service status. Confirm that the service is running.");
   }
 }
 

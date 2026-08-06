@@ -74,7 +74,7 @@ export function buildQwenUrl(config) {
   if (!endpoint) {
     if (!config.workspaceId) {
       throw new Error(
-        "缺少 QWEN_WORKSPACE_ID（或完整的 QWEN_REALTIME_URL）。",
+        "QWEN_WORKSPACE_ID (or a complete QWEN_REALTIME_URL) is required.",
       );
     }
     const domain =
@@ -90,25 +90,25 @@ export function buildQwenUrl(config) {
 
 export function validateStartMessage(message) {
   if (!message || message.type !== "start") {
-    throw new Error("第一条控制消息必须是 start。");
+    throw new Error("The first control message must be start.");
   }
   if (message.provider && !["local", "qwen"].includes(message.provider)) {
-    throw new Error("provider 只支持 local 或 qwen。");
+    throw new Error("provider must be local or qwen.");
   }
   if (![
     "zh",
     "en",
   ].includes(message.sourceLanguage)) {
-    throw new Error("sourceLanguage 只支持 zh 或 en。");
+    throw new Error("sourceLanguage must be zh or en.");
   }
   if (![
     "zh",
     "en",
   ].includes(message.targetLanguage)) {
-    throw new Error("targetLanguage 只支持 zh 或 en。");
+    throw new Error("targetLanguage must be zh or en.");
   }
   if (message.sourceLanguage === message.targetLanguage) {
-    throw new Error("源语言和目标语言不能相同。");
+    throw new Error("Source and target languages must differ.");
   }
 
   const glossary = message.glossary ?? {};
@@ -117,11 +117,11 @@ export function validateStartMessage(message) {
     Array.isArray(glossary) ||
     glossary === null
   ) {
-    throw new Error("glossary 必须是键值对象。");
+    throw new Error("glossary must be a key-value object.");
   }
   const entries = Object.entries(glossary);
   if (entries.length > MAX_GLOSSARY_ENTRIES) {
-    throw new Error(`术语表最多 ${MAX_GLOSSARY_ENTRIES} 条。`);
+    throw new Error(`The glossary can contain at most ${MAX_GLOSSARY_ENTRIES} entries.`);
   }
   for (const [source, target] of entries) {
     if (
@@ -131,7 +131,7 @@ export function validateStartMessage(message) {
       String(target).length > MAX_GLOSSARY_TERM_LENGTH
     ) {
       throw new Error(
-        `术语不能为空，且每项不得超过 ${MAX_GLOSSARY_TERM_LENGTH} 个字符。`,
+        `Glossary terms cannot be empty or longer than ${MAX_GLOSSARY_TERM_LENGTH} characters.`,
       );
     }
   }
@@ -313,7 +313,7 @@ function createQwenProxyConnection(client, config) {
     shutdownTimer = setTimeout(() => {
       sendJson(client, {
         type: "proxy.error",
-        message: "等待 Qwen 刷新最后一句超时，连接已关闭。",
+        message: "Timed out while waiting for Qwen to flush the final sentence. The connection was closed.",
       });
       upstream?.close();
       client.close();
@@ -321,8 +321,8 @@ function createQwenProxyConnection(client, config) {
   };
 
   const openUpstream = (rawStart) => {
-    if (state !== "idle") throw new Error("翻译会话已经启动。");
-    if (!config.apiKey) throw new Error("服务端缺少 DASHSCOPE_API_KEY。");
+    if (state !== "idle") throw new Error("A translation session is already running.");
+    if (!config.apiKey) throw new Error("DASHSCOPE_API_KEY is missing on the server.");
     const startOptions = validateStartMessage(rawStart);
     const qwenUrl = buildQwenUrl(config);
     state = "connecting";
@@ -365,14 +365,14 @@ function createQwenProxyConnection(client, config) {
         upstream.close(1000);
         client.close(1000);
       } else if (event.type === "error") {
-        fail(event.error?.message || "Qwen 返回未知错误。");
+        fail(event.error?.message || "Qwen returned an unknown error.");
       }
     });
 
-    upstream.on("error", (error) => fail(`Qwen 连接失败：${safeMessage(error)}`));
+    upstream.on("error", (error) => fail(`Qwen connection failed: ${safeMessage(error)}`));
     upstream.on("close", (code) => {
       if (state !== "finished" && state !== "finishing") {
-        fail(`Qwen 连接意外关闭（${code}）。`);
+        fail(`The Qwen connection closed unexpectedly (${code}).`);
       }
     });
   };
@@ -387,7 +387,7 @@ function createQwenProxyConnection(client, config) {
         } else {
           queuedAudioBytes += chunk.length;
           if (queuedAudioBytes > MAX_QUEUED_AUDIO_BYTES) {
-            throw new Error("初始化期间缓存的音频过多，请重新开始。");
+            throw new Error("Too much audio was buffered during initialization. Please start again.");
           }
           queuedAudio.push(chunk);
         }
@@ -397,7 +397,7 @@ function createQwenProxyConnection(client, config) {
       const message = JSON.parse(data.toString());
       if (message.type === "start") openUpstream(message);
       else if (message.type === "finish") finish();
-      else throw new Error(`不支持的控制消息：${message.type ?? "unknown"}`);
+      else throw new Error(`Unsupported control message: ${message.type ?? "unknown"}`);
     } catch (error) {
       fail(safeMessage(error));
     }
@@ -421,7 +421,7 @@ async function fetchJsonWithTimeout(url, options = {}, timeoutMs = 3000) {
     const response = await fetch(url, { ...options, signal: controller.signal });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) {
-      throw new Error(body.error || `本地模型服务返回 HTTP ${response.status}。`);
+      throw new Error(body.error || `The local model service returned HTTP ${response.status}.`);
     }
     return body;
   } finally {
@@ -499,15 +499,15 @@ function createLocalProxyConnection(client, config) {
   const enqueue = (audio) => {
     if (!audio?.length) return;
     work = work.then(() => translateUtterance(audio)).catch((error) => {
-      fail(`本地识别或翻译失败：${safeMessage(error)}`);
+      fail(`Local recognition or translation failed: ${safeMessage(error)}`);
     });
   };
 
   const start = async (rawStart) => {
-    if (state !== "idle") throw new Error("翻译会话已经启动。");
+    if (state !== "idle") throw new Error("A translation session is already running.");
     startOptions = validateStartMessage(rawStart);
     if (startOptions.provider !== "local") {
-      throw new Error("本地会话的 provider 必须是 local。");
+      throw new Error("A local session must use the local provider.");
     }
     state = "connecting";
     sendJson(client, {
@@ -518,7 +518,7 @@ function createLocalProxyConnection(client, config) {
     const health = await checkLocalTranslator(config, 3000);
     if (!health.available) {
       throw new Error(
-        "本地模型服务未启动。请先运行 npm run local（首次使用先运行 npm run local:setup）。",
+        "The local model service is not running. Run npm run local (and npm run local:setup first for a new installation).",
       );
     }
     if (failed || client.readyState !== WebSocket.OPEN) return;
@@ -553,7 +553,7 @@ function createLocalProxyConnection(client, config) {
           sendJson(client, {
             type: "conversation.item.input_audio_transcription.text",
             text: "",
-            stash: "正在聆听这句话…",
+            stash: "Listening to this sentence…",
           });
         }
         enqueue(utterance);
@@ -566,7 +566,7 @@ function createLocalProxyConnection(client, config) {
       } else if (message.type === "finish") {
         finish().catch((error) => fail(safeMessage(error)));
       } else {
-        throw new Error(`不支持的控制消息：${message.type ?? "unknown"}`);
+        throw new Error(`Unsupported control message: ${message.type ?? "unknown"}`);
       }
     } catch (error) {
       fail(safeMessage(error));
@@ -579,7 +579,7 @@ function createProxyConnection(client, config) {
   const routeFirstMessage = (data, isBinary) => {
     if (routed) return;
     if (isBinary) {
-      sendJson(client, { type: "proxy.error", message: "请先发送 start 控制消息。" });
+      sendJson(client, { type: "proxy.error", message: "Send the start control message first." });
       client.close(1008);
       return;
     }
@@ -692,15 +692,15 @@ async function main() {
   loadDotEnv();
   const app = await startServer();
   const displayHost = app.config.host === "0.0.0.0" ? "localhost" : app.config.host;
-  console.log(`Qwen 中英实时翻译 Demo：http://${displayHost}:${app.address.port}`);
+  console.log(`Qwen Chinese-English Live Translator: http://${displayHost}:${app.address.port}`);
   const local = await checkLocalTranslator(app.config);
   console.log(
     local.available
-      ? "完全本地模式：已就绪（MLX Whisper + Qwen3）"
-      : "完全本地模式：未启动（运行 npm run local）",
+      ? "Fully local mode: ready (MLX Whisper + Qwen3)"
+      : "Fully local mode: unavailable (run npm run local)",
   );
   if (!app.config.apiKey || !(app.config.workspaceId || app.config.realtimeUrl)) {
-    console.warn("百炼云端模式：未配置（可忽略；完全本地模式无需凭据）。");
+    console.warn("Model Studio cloud mode is not configured. This is optional; local mode does not require credentials.");
   }
 }
 

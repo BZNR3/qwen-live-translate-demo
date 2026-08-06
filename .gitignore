@@ -1,0 +1,8 @@
+node_modules/
+.venv/
+__pycache__/
+*.py[cod]
+.env
+npm-debug.log*
+pnpm-debug.log*
+.DS_Store
